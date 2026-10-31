@@ -17,22 +17,21 @@ import hmac
 import secrets
 import socket
 import ssl
+import aiohttp
 
 LOGGER = logging.getLogger(__package__)
 SCHEMA = json.loads(Path(__file__).with_name("diagnostic-schema.json").read_text())
 REASONS = frozenset(json.loads(Path(__file__).with_name("diagnostic-codes.json").read_text()))
 PROVIDERS = frozenset({"openai", "elevenlabs", "google", "deepgram", "groq", "mistral", "azure", "aws", "local"})
-PROVIDER_CODES = frozenset({"authentication_error", "auth_error", "invalid_api_key", "quota_exceeded",
-    "rate_limit_exceeded", "resource_exhausted", "insufficient_audio_activity", "input_error", "audio_too_short",
-    "commit_throttled", "transcriber_error", "session_time_limit_exceeded"})
-CATEGORIES = frozenset({"authentication", "timeout", "cancelled", "no_speech", "rate_limit", "capacity",
+PROVIDER_CODES = frozenset(SCHEMA["provider_codes"])
+CATEGORIES = frozenset({"authentication", "timeout", "cancelled", "no_speech", "rate_limit", "quota", "capacity",
     "protocol", "transport", "provider", "storage", "policy", "validation", "internal", "unknown"})
 STAGES = frozenset(SCHEMA["stages"])
 CURRENT = ContextVar("openclaw_voice_diagnostic_span", default=None)
 FINGERPRINT_KEY = secrets.token_bytes(32)
 SYSTEM_CODES = frozenset(SCHEMA["system_codes"])
 EXCEPTION_TYPES = frozenset({"TimeoutError", "CancelledError", "OSError", "ConnectionError", "ClientError",
-    "ClientConnectorError", "ClientResponseError", "ClientPayloadError", "ServerDisconnectedError", "UnicodeDecodeError",
+    "ClientConnectorError", "ClientConnectorDNSError", "ClientConnectorCertificateError", "ClientSSLError", "ConnectionTimeoutError", "SocketTimeoutError", "ClientResponseError", "ClientPayloadError", "ServerDisconnectedError", "UnicodeDecodeError",
     "ValueError", "KeyError", "TypeError", "VoiceTransportError", "ConfigEntryAuthFailed", "UpdateFailed",
     "ServiceValidationError", "HomeAssistantError", "ExceptionGroup", "BaseExceptionGroup", "GeneratorExit", "RuntimeError", "Exception", "OverflowError", "other"})
 
@@ -51,7 +50,7 @@ def _uuid(value):
 def safe_fields(raw=None, depth=0):
     raw = raw if isinstance(raw, dict) else {}
     result = {k: raw[k] for k in ("trace_id", "span_id", "parent_span_id", "request_id", "job_id", "call_id") if _uuid(raw.get(k))}
-    for key in ("elapsed_ms", "bytes", "frames", "segments", "attempt", "count", "failure_count", "exit_code", "suppressed"):
+    for key in ("elapsed_ms", "bytes", "frames", "segments", "attempt", "count", "failure_count", "exit_code", "suppressed", "retry_after_ms"):
         value = raw.get(key)
         if type(value) in (int, float) and math.isfinite(value) and abs(value) <= 2**53:
             result[key] = round(value, 3)
@@ -117,7 +116,7 @@ def failure_summary(error, _depth=0, **facts):
         status = getattr(error, "status", None) or getattr(error, "status_code", None) or inherited.get("http_status")
         detail = reason + " " + inherited.get("provider_code", "")
         category = "unknown"
-        if "auth" in detail or "invalid_api_key" in detail or reason in {"scope_denied", "pairing_failed"} or status in (401, 403):
+        if any(v in detail for v in ("auth", "invalid_api_key", "permission_denied", "forbidden", "unaccepted_terms")) or reason in {"scope_denied", "pairing_failed"} or status in (401, 403):
             category = "authentication"
         elif isinstance(error, (TimeoutError, asyncio.TimeoutError)) or "timeout" in reason or getattr(error, "errno", None) == errno.ETIMEDOUT:
             category = "timeout"
@@ -125,14 +124,18 @@ def failure_summary(error, _depth=0, **facts):
             category = "cancelled"
         elif any(v in detail for v in ("no_speech", "insufficient_audio_activity", "audio_too_short")):
             category = "no_speech"
-        elif any(v in detail for v in ("rate_limit", "quota", "throttled", "resource_exhausted")) or status == 429:
+        elif any(v in detail for v in ("quota_exceeded", "insufficient_quota", "payment_required", "subscription_required")) or status == 402:
+            category = "quota"
+        elif any(v in detail for v in ("rate_limit", "throttled", "resource_exhausted", "too_many_requests", "concurrent_limit_exceeded")) or status == 429:
             category = "rate_limit"
+        elif any(v in detail for v in ("input_error", "invalid_request", "validation_error", "model_not_found", "voice_not_found", "chunk_size_exceeded", "session_time_limit_exceeded")):
+            category = "validation"
         elif "capacity" in reason or "limit" in reason:
             category = "capacity"
-        elif isinstance(error, ssl.SSLError):
+        elif isinstance(error, (aiohttp.ClientConnectionError, ssl.SSLError)):
             category = "transport"
         elif isinstance(error, OSError):
-            category = "transport" if isinstance(error, (ConnectionError, socket.gaierror)) or getattr(error, "errno", None) in {errno.ECONNRESET, errno.ECONNREFUSED, errno.EPIPE} else "storage"
+            category = "transport" if isinstance(error, (ConnectionError, socket.gaierror)) or getattr(error, "errno", None) in {errno.ECONNRESET, errno.ECONNREFUSED, errno.EPIPE, errno.ENETUNREACH, errno.EHOSTUNREACH, errno.ENETDOWN} else "storage"
         elif any(v in reason for v in ("frame", "protocol", "sequence", "ownership", "json")):
             category = "protocol"
         elif any(v in reason for v in ("transport", "backend_unavailable", "replay", "stream_interrupted")):
@@ -146,11 +149,18 @@ def failure_summary(error, _depth=0, **facts):
         elif isinstance(error, (TypeError, ValueError, KeyError)):
             category = "internal"
         message = error.args[0][:4096] if getattr(error, "args", ()) and isinstance(error.args[0], str) else ""
-        system = errno.errorcode.get(getattr(error, "errno", None))
+        system_error = getattr(error, "os_error", error)
+        system = errno.errorcode.get(getattr(system_error, "errno", None))
         if isinstance(error, ssl.SSLError):
             system = "TLS_CERTIFICATE_VERIFY_FAILED" if isinstance(error, ssl.SSLCertVerificationError) else "TLS_ERROR"
-        if isinstance(error, socket.gaierror):
-            system = "EAI_AGAIN" if error.errno == socket.EAI_AGAIN else "ENOTFOUND"
+        if isinstance(system_error, socket.gaierror):
+            system = "EAI_AGAIN" if system_error.errno == socket.EAI_AGAIN else "ENOTFOUND"
+        # A timeout owner converts its inner task cancellation to TimeoutError.
+        # The inner CancelledError must not overwrite that authoritative boundary.
+        owned_timeout = isinstance(error, (TimeoutError, asyncio.TimeoutError))
+        if owned_timeout:
+            for key in ("category", "exception_type", "classification_source"):
+                inherited.pop(key, None)
         if inherited.get("reason") == "unknown_error" and reason != "unknown_error":
             inherited.pop("reason")
         if inherited.get("category") == "unknown" and category != "unknown":
@@ -176,7 +186,8 @@ class Diagnostics:
         self.failures = deque(maxlen=max(1, min(failure_limit, 64)) if type(failure_limit) is int else 32)
         self.rates = {}
         self.sequence = 0
-        self.stats = {"events_total": 0, "recent_evicted": 0, "failures_evicted": 0, "native_suppressed": 0, "observer_failures": 0}
+        self.stats = {"events_total": 0, "recent_evicted": 0, "failures_evicted": 0, "native_suppressed": 0, "observer_failures": 0, "polling_events": 0}
+        self.availability = {"checks": 0, "failures": 0, "consecutive_failures": 0}
 
     def current(self):
         span = CURRENT.get()
@@ -190,10 +201,15 @@ class Diagnostics:
                     "component": _label(component), "operation": _label(operation), "phase": _label(phase),
                     **safe_fields(span.fields if span else {}), **safe_fields(facts)}
             self.stats["events_total"] += 1
-            if len(self.recent) == self.recent.maxlen:
-                self.stats["recent_evicted"] += 1
-            self.recent.append(item)
-            if phase in {"failed", "partial_failure", "cleanup_failed", "interrupted"}:
+            polling = span is not None and span.quiet and (component, operation) != ("connection", "availability")
+            if polling:
+                self.stats["polling_events"] += 1
+                level = "debug"
+            else:
+                if len(self.recent) == self.recent.maxlen:
+                    self.stats["recent_evicted"] += 1
+                self.recent.append(item)
+            if not polling and phase in {"failed", "partial_failure", "cleanup_failed", "interrupted"}:
                 if len(self.failures) == self.failures.maxlen:
                     self.stats["failures_evicted"] += 1
                 self.failures.append(item)
@@ -221,8 +237,29 @@ class Diagnostics:
     def start(self, component, operation, **facts):
         return Span(self, component, operation, facts)
 
+    def poll_result(self, error=None):
+        """Record native availability transitions, not two warnings per poll."""
+        state = self.availability
+        previous = state.get("available")
+        state["checks"] += 1
+        state["available"] = error is None
+        if error is not None:
+            state["failures"] += 1
+            state["consecutive_failures"] += 1
+            state["last_failure_at"] = round(time()*1000)
+            state["last_failure"] = failure_summary(error, stage="refresh")
+            if previous is not False:
+                self.event("connection", "availability", "failed", {**state["last_failure"], "count": 1}, "warning")
+        else:
+            state["last_success_at"] = round(time()*1000)
+            failures = state["consecutive_failures"]
+            state["consecutive_failures"] = 0
+            if previous is not True:
+                self.event("connection", "availability", "restored" if previous is False else "ready", {"count": failures}, "info")
+
     def snapshot(self):
-        return json.loads(json.dumps({"schema": 1, "recent": list(self.recent), "failures": list(self.failures), "stats": self.stats}))
+        return json.loads(json.dumps({"schema": 1, "recent": list(self.recent), "failures": list(self.failures), "stats": self.stats,
+                                     "availability": self.availability}))
 
     def instrument(self, target, component, methods):
         for name in methods:
@@ -257,12 +294,14 @@ class Span:
         self.owner, self.component, self.operation = owner, component, operation
         self.started, self.finished = owner.clock(), False
         parent = CURRENT.get()
+        self.quiet = bool(parent and parent.quiet) or (component, operation) == ("connection", "refresh")
         self.fields = {**(parent.fields if parent else {}), **safe_fields(facts), "span_id": str(uuid4())}
         self.fields.setdefault("trace_id", str(uuid4()))
         if parent:
             self.fields["parent_span_id"] = parent.fields["span_id"]
         self.steps = []
-        owner.event(component, operation, "started", self.fields)
+        with self.activate():
+            owner.event(component, operation, "started", self.fields)
 
     def __enter__(self):
         self.token = CURRENT.set(self)

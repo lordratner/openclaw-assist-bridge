@@ -91,6 +91,8 @@ class VoiceTransport:
     @observe("http", "control")
     async def control(self, method: str, path: str, data: dict | None = None) -> dict:
         span = self.diagnostics.current()
+        if method == "GET" and path == "/capabilities":
+            span.quiet = True
         fixed = {"/capabilities": "capabilities", "/conversations": "conversation_open", "/pair": "pair_revoke"}
         operation = fixed.get(path, "other_control")
         job = re.fullmatch(r"/jobs/([^/]+)(?:/(cancel|tool-claim|tool-results))?", path)

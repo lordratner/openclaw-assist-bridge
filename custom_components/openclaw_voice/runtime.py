@@ -139,11 +139,16 @@ class Runtime:
                 self.hass.config_entries.async_update_entry(self.entry,
                     data={**self.entry.data, "service_identity": stable_identity}, unique_id=stable_identity)
             self.actions.resume()
+            self.diagnostics.poll_result()
             return caps
         except VoiceTransportError as error:
+            self.diagnostics.poll_result(error)
             if error.code == "backend_auth_failed":
                 raise ConfigEntryAuthFailed("OpenClaw pairing was revoked or its agent changed", translation_domain=DOMAIN, translation_key="pairing_revoked") from error
             raise UpdateFailed("OpenClaw connection unavailable: " + error.code) from error
+        except Exception as error:
+            self.diagnostics.poll_result(error)
+            raise
 
     def stage_available(self, name):
         return self.coordinator.last_update_success and stage_available(self.capabilities, name)
