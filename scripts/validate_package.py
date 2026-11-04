@@ -21,6 +21,15 @@ def main():
     assert manifest["integration_type"] == "service"
     assert manifest["iot_class"] == "local_polling"
     assert manifest["requirements"] == []
+    hacs = json.loads((ROOT / "hacs.json").read_text())
+    assert hacs["name"] == manifest["name"]
+    assert hacs["homeassistant"] == "2026.10.4"
+    assert not hacs.get("content_in_root", False)
+    assert not hacs.get("zip_release", False)
+    assert {p.name for p in (ROOT / "custom_components").iterdir()
+            if p.is_dir() and not p.name.startswith(".") and p.name != "__pycache__"} == {manifest["domain"]}
+    for key in ("documentation", "issue_tracker", "codeowners", "version"):
+        assert manifest[key], f"HACS requires manifest field {key}"
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())
     assert project["project"]["version"] == manifest["version"].replace("-dev.", ".dev")
     strings = load("strings.json")
@@ -45,7 +54,7 @@ def main():
         assert image.startswith(b"\x89PNG\r\n\x1a\n")
         assert struct.unpack(">II", image[16:24]) == (size, size)
     print(json.dumps({"result": "PASS", "version": manifest["version"], "modules": len(parsed),
-                      "checks": ["metadata", "syntax", "flow-descriptions", "entity-and-error-translations", "reconfigure", "no-vendor-dependencies"]}))
+                      "checks": ["metadata", "hacs-layout-and-metadata", "syntax", "flow-descriptions", "entity-and-error-translations", "reconfigure", "no-vendor-dependencies"]}))
 
 
 if __name__ == "__main__":

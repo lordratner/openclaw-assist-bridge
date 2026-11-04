@@ -1,5 +1,35 @@
 # OpenClaw Home Assistant integration
 
+[![Validation](https://github.com/lordratner/home-assistant-openclaw-voice/actions/workflows/validate.yml/badge.svg)](https://github.com/lordratner/home-assistant-openclaw-voice/actions/workflows/validate.yml)
+[![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=lordratner&repository=home-assistant-openclaw-voice&category=integration)
+
+## Install with HACS
+
+Requires **Home Assistant 2026.10.4 or newer**, HACS, and a configured
+[companion OpenClaw plugin](https://github.com/lordratner/openclaw-home-assistant).
+The integration remains a **development release**, not a stable or universally
+qualified product. HACS installs the HA integration only, not the OpenClaw plugin
+or optional OpenClaw core capabilities.
+
+Use the **Open in HACS** button above, or add it manually:
+
+1. Open **HACS → ⋮ → Custom repositories**.
+2. Add `https://github.com/lordratner/home-assistant-openclaw-voice` with type
+   **Integration**.
+3. Find **OpenClaw Home Assistant** in HACS and download it. To select a
+   development prerelease, enable **Show beta versions** in the download dialog.
+4. Restart Home Assistant, then open **Settings → Devices & services → Add
+   integration → OpenClaw Home Assistant** and pair with the OpenClaw plugin.
+
+For an existing manual installation, back up first, let HACS manage the same
+`custom_components/openclaw_voice` directory, and restart HA. Keep the existing
+integration entry; do not delete/re-pair it or create a duplicate just to switch
+installation methods. Installation does not change your Assist pipelines.
+
+Custom-repository installation does not require default-catalog inclusion.
+Inclusion in HACS's default catalog is subject to HACS review and is not claimed
+here. See [installation, upgrades and rollback](docs/INSTALL.md) for details.
+
 ## Current product candidate
 
 Bridge **dev.11** + HA **dev.7**, additive protocol **1.2**. New source candidates,
@@ -22,12 +52,12 @@ model/thinking/fast and provider credentials. HA chooses mode and playback targe
 **Integration 0.0.1-dev.7: development candidate, not a stable release.**
 Config/options/reauth, all three entities and both actions are implemented and
 exercised with real HA APIs in disposable runtimes. Real-provider and physical
-listening behavior remain deployment-specific acceptance gates; HACS
-discovery/publication is not claimed.
+listening behavior remain deployment-specific acceptance gates. HACS
+custom-repository installation is supported; default-catalog inclusion is separate.
 
 ## Setup and use
 
-After a separately reviewed installation, add **OpenClaw Home Assistant** in
+After installing through HACS or manually, add **OpenClaw Home Assistant** in
 Settings → Devices & services. Enter the Gateway base URL and a one-use pairing
 code issued by its administrator. Choose persistent history or a fresh session
 per conversation. Only the scoped voice token is stored in HA's config entry;

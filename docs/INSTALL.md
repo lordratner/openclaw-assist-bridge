@@ -1,7 +1,7 @@
 # Installation, upgrade and rollback — development candidate
 
 This is a review procedure, **not evidence that a live installation was run**.
-The HA integration is 0.0.1-dev.6; the companion bridge candidate is 0.0.1-dev.10.
+The HA integration is 0.0.1-dev.7; the companion bridge candidate is 0.0.1-dev.11.
 See [current product setup](PRODUCT.md) for protocol1.2 pairing, stage readiness and optional speech.
 These development versions must remain a controlled canary until
 [acceptance gates](ACCEPTANCE.md) pass. Tested pair: OC 2026.10.3 / Node 24.18.1,
@@ -31,7 +31,7 @@ separate compatibility run; do not infer broad support from version ordering.
 After approval, install the reviewed local archive without silently enabling it:
 
 ```sh
-openclaw plugins install --no-enable /review/path/lordratner-openclaw-home-assistant-0.0.1-dev.10.tgz
+openclaw plugins install --no-enable /review/path/lordratner-openclaw-home-assistant-0.0.1-dev.11.tgz
 ```
 
 Use the normal installation-policy review; do not bypass a rejection. Preserve
@@ -75,12 +75,35 @@ in HA.
 
 ## HA installation
 
-After approval, install the reviewed `custom_components/openclaw_voice/` directory
-under HA's configuration directory. Use a supported file-deployment mechanism;
-do not replace another integration or edit HA internal storage directly. Restart
-HA only under the separately approved maintenance step, then add the integration
-in Settings → Devices & services. HACS custom-repository discovery is a future
-validation path, not a claim that a public HACS listing exists.
+### HACS (recommended)
+
+With HACS already installed, use [Open in HACS](https://my.home-assistant.io/redirect/hacs_repository/?owner=lordratner&repository=home-assistant-openclaw-voice&category=integration),
+or open **HACS → ⋮ → Custom repositories**, add
+`https://github.com/lordratner/home-assistant-openclaw-voice`, and choose
+**Integration**. Find **OpenClaw Home Assistant** and download it. For a
+development prerelease, enable **Show beta versions** in the download dialog.
+Read the selected release's requirements and notes before downloading.
+
+HACS manages only `custom_components/openclaw_voice/`. It does not install the
+companion OpenClaw plugin, provision providers, change pipelines, or restart HA
+for you. Activate the downloaded Python code with a Home Assistant restart,
+then add the integration in **Settings → Devices & services**. This download
+path does not imply inclusion in the HACS default catalog.
+
+Existing manual installation: back up the current component and HA configuration
+first, then download through HACS into the same component directory and restart
+HA. Keep the existing config entry, entities and pairing; do not remove the
+integration or add a duplicate. Verify the loaded version and connection after
+restart. HACS does not take ownership of your OpenClaw installation.
+
+### Manual alternative
+
+Install the reviewed `custom_components/openclaw_voice/` directory under HA's
+configuration directory. Use a supported file-deployment mechanism; do not
+replace another integration or edit HA internal storage directly. Restart HA
+under the approved maintenance step, then add the integration in
+**Settings → Devices & services**. Do not mix manual replacements with HACS
+updates without recording which version is installed.
 
 Enter the Gateway URL, one-use code and default history mode. Verify three native
 entities and the `query` / `start_conversation` actions. Create/select a test Assist
@@ -98,8 +121,9 @@ speaker output require the canary approval.
 
 Upgrade paired protocol-major versions together. Preserve plugin metadata and
 HA config entries; never reset state to resolve an unknown receipt or stale
-handle. Read release/migration notes first. Current metadata schema is v1;
-unknown schemas fail closed, and no upgrade migration is claimed yet. Quiesce
+handle. Read release/migration notes first. HA config-entry version 2 migrates
+the history preference from v1 data into options while preserving existing
+entry/entity IDs and credentials; future versions fail closed. Quiesce
 active work, install reviewed versions, perform approved activation/restarts,
 verify status/entities/pairing and repeat the bounded canary. An interrupted
 accepted turn may have executed tools: recover its status, do not resubmit it.
