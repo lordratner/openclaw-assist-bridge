@@ -1,5 +1,9 @@
 # Installation, upgrade and rollback — development candidate
 
+Source: [OpenClaw Assist Bridge](https://github.com/lordratner/openclaw-assist-bridge).
+The repository rename does not change the `openclaw_voice` domain, existing
+pairings, or the companion plugin ID. No identifier migration is needed.
+
 This is a review procedure, **not evidence that a live installation was run**.
 The HA integration is 0.0.1-dev.7; the companion bridge candidate is 0.0.1-dev.11.
 See [current product setup](PRODUCT.md) for protocol1.2 pairing, stage readiness and optional speech.
@@ -77,9 +81,9 @@ in HA.
 
 ### HACS (recommended)
 
-With HACS already installed, use [Open in HACS](https://my.home-assistant.io/redirect/hacs_repository/?owner=lordratner&repository=home-assistant-openclaw-voice&category=integration),
+With HACS already installed, use [Open in HACS](https://my.home-assistant.io/redirect/hacs_repository/?owner=lordratner&repository=openclaw-assist-bridge&category=integration),
 or open **HACS → ⋮ → Custom repositories**, add
-`https://github.com/lordratner/home-assistant-openclaw-voice`, and choose
+`https://github.com/lordratner/openclaw-assist-bridge`, and choose
 **Integration**. Find **OpenClaw Home Assistant** and download it. For a
 development prerelease, enable **Show beta versions** in the download dialog.
 Read the selected release's requirements and notes before downloading.

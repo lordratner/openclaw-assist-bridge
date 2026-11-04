@@ -12,10 +12,10 @@
     "stt",
     "tts"
   ],
-  "documentation": "https://github.com/lordratner/home-assistant-openclaw-voice",
+  "documentation": "https://github.com/lordratner/openclaw-assist-bridge",
   "integration_type": "service",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/lordratner/home-assistant-openclaw-voice/issues",
+  "issue_tracker": "https://github.com/lordratner/openclaw-assist-bridge/issues",
   "requirements": [],
   "version": "0.0.1-dev.7"
 }
