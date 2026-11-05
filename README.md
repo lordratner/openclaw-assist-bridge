@@ -16,8 +16,8 @@ deleted or re-paired because of this repository rename.
 
 Requires **Home Assistant 2026.10.4 or newer**, HACS, and a configured
 [companion OpenClaw plugin](https://github.com/lordratner/homeassistant-assist).
-The integration remains a **development release**, not a stable or universally
-qualified product. HACS installs the HA integration only, not the OpenClaw plugin
+This is an initial public release, not universal provider or hardware
+certification. HACS installs the HA integration only, not the OpenClaw plugin
 or optional OpenClaw core capabilities.
 
 Use the **Open in HACS** button above, or add it manually:
@@ -25,8 +25,8 @@ Use the **Open in HACS** button above, or add it manually:
 1. Open **HACS → ⋮ → Custom repositories**.
 2. Add `https://github.com/lordratner/openclaw-assist-bridge` with type
    **Integration**.
-3. Find **OpenClaw Home Assistant** in HACS and download it. To select a
-   development prerelease, enable **Show beta versions** in the download dialog.
+3. Find **OpenClaw Home Assistant** in HACS and download it. Release **0.0.1** does not need
+   **Show beta versions** (that toggle is only for older development releases).
 4. Restart Home Assistant, then open **Settings → Devices & services → Add
    integration → OpenClaw Home Assistant** and pair with the OpenClaw plugin.
 
@@ -39,13 +39,16 @@ Custom-repository installation does not require default-catalog inclusion.
 Inclusion in HACS's default catalog is subject to HACS review and is not claimed
 here. See [installation, upgrades and rollback](docs/INSTALL.md) for details.
 
-## Current product candidate
+## Public release 0.0.1
 
-Bridge **dev.11** + HA **dev.7**, additive protocol **1.2**. New source candidates,
-not a public compatibility certification or a claim they are installed. Start
-with [the product setup guide](docs/PRODUCT.md), [compatibility](docs/COMPATIBILITY.md)
-and [HA quality checklist](docs/QUALITY.md). Older versioned notes below are
-historical feature evidence, not the current release status.
+Plugin **0.0.1** uses the dev.11 implementation; HA integration **0.0.1** uses
+the dev.7 implementation, with additive protocol **1.2**. Install the versioned
+[plugin archive](https://github.com/lordratner/homeassistant-assist/releases/tag/0.0.1)
+and [HA integration](https://github.com/lordratner/openclaw-assist-bridge/releases/tag/0.0.1)
+using the [installation guide](docs/INSTALL.md). No npm publication is required.
+This initial public release does not certify every provider, satellite or runtime.
+Start with [setup](docs/PRODUCT.md) and [compatibility](docs/COMPATIBILITY.md).
+Older versioned sections below are historical engineering notes.
 
 Use OpenClaw conversation with existing HA speech providers, all three OC
 entities, or a mix. Missing OC speech dependencies do not disable text chat.
@@ -58,11 +61,10 @@ backed by the companion [OpenClaw plugin](https://github.com/lordratner/homeassi
 OC owns the selected agent, normal tools/memory/policy, actual persistent session,
 model/thinking/fast and provider credentials. HA chooses mode and playback target.
 
-**Integration 0.0.1-dev.7: development candidate, not a stable release.**
-Config/options/reauth, all three entities and both actions are implemented and
-exercised with real HA APIs in disposable runtimes. Real-provider and physical
-listening behavior remain deployment-specific acceptance gates. HACS
-custom-repository installation is supported; default-catalog inclusion is separate.
+**Integration 0.0.1**, based on dev.7. Config/options/reauth, all three entities
+and both actions are exercised with real HA APIs in disposable runtimes.
+Real-provider and physical listening behavior remain deployment-specific.
+HACS custom-repository installation is supported; default-catalog inclusion is separate.
 
 ## Setup and use
 

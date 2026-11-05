@@ -1,12 +1,12 @@
 # Native SDK capability notes
 
-## Optional finite-input STT with the companion dev.6 bridge
+## Optional finite-input STT (introduced in companion dev.6)
 
-The companion OpenClaw dev.6 plugin consumes the optional public injected
-`api.runtime.mediaUnderstanding.transcribeAudioStream` method. The reviewed core
-change is PR187371 at `79b395a14b0a03bf31c66a88e950a7c13af83232`, with a separate
-OpenClaw 2026.10.3 backport being prepared. This document does not claim that
-the backport or bridge candidate has been activated live.
+The companion OpenClaw plugin consumes the optional public injected
+`api.runtime.mediaUnderstanding.transcribeAudioStream` method. The proposed core
+runtime is [PR #187371](https://github.com/openclaw/openclaw/pull/187371),
+still open as of 2026-11-04. It is optional: conversation, native batch STT,
+buffered TTS and HA-native speech do not need it. No core patch is bundled.
 
 The existing HA dev.3 client already streams bounded PCM16 mono 16 kHz input
 and waits for one finalized transcript. It does not choose OC providers/models,
