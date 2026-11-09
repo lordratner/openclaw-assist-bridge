@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Connect OpenClaw",
-        "description": "Pair with OpenClaw, then choose its Conversation entity in an Assist pipeline. Keep existing HA STT/TTS or select the optional OpenClaw speech entities. Credentials stay on the platform that owns the provider.",
+        "description": "Pair with OpenClaw, then choose its Conversation entity in an Assist pipeline. Keep existing HA STT/TTS or select the optional OpenClaw speech entities. Credentials stay on the platform that owns the provider.\n\nOn your OpenClaw server, run:\n\n```bash\nopenclaw gateway call openclaw_home_assistant.pairing.issue --params '{\"label\":\"Home Assistant\"}' --json\n```\n\nPaste the returned `pairing_code` below within five minutes. Each code can be used only once.",
         "data": {
           "url": "OpenClaw gateway URL",
           "pairing_code": "One-time pairing code",
@@ -13,14 +13,14 @@
         },
         "data_description": {
           "url": "OpenClaw gateway base address. Use HTTPS across untrusted networks. Do not include a token or password.",
-          "pairing_code": "Issue a short-lived one-use code with the companion plugin pairing.issue admin action. Never enter a Gateway admin token or provider key.",
+          "pairing_code": "Paste the pairing_code returned by the command above. Never enter a Gateway admin token or provider key.",
           "session_mode": "Persistent shares the selected OC history; fresh creates separate history per HA conversation. Neither disables normal agent memory.",
           "llm_hass_api": "Optional native Assist tools for exposed entities. Other OpenClaw tools are governed separately by its agent policy."
         }
       },
       "reauth_confirm": {
         "title": "Pair OpenClaw again",
-        "description": "Create a new pairing code in OpenClaw to restore this connection.",
+        "description": "Create a new pairing code in OpenClaw to restore this connection.\n\nOn your OpenClaw server, run:\n\n```bash\nopenclaw gateway call openclaw_home_assistant.pairing.issue --params '{\"label\":\"Home Assistant\"}' --json\n```\n\nPaste the returned `pairing_code` below within five minutes. Each code can be used only once.",
         "data": {
           "url": "OpenClaw gateway URL",
           "pairing_code": "One-time pairing code",
@@ -28,7 +28,7 @@
         },
         "data_description": {
           "url": "OpenClaw gateway base address. Use HTTPS across untrusted networks. Do not include a token or password.",
-          "pairing_code": "Issue a short-lived one-use code with the companion plugin pairing.issue admin action. Never enter a Gateway admin token or provider key.",
+          "pairing_code": "Paste the pairing_code returned by the command above. Never enter a Gateway admin token or provider key.",
           "session_mode": "Persistent shares the selected OC history; fresh creates separate history per HA conversation. Neither disables normal agent memory."
         }
       },
