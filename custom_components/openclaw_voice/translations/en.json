@@ -91,12 +91,12 @@
     },
     "stt": {
       "recognition": {
-        "name": "Speech recognition"
+        "name": "STT"
       }
     },
     "tts": {
       "speech": {
-        "name": "Speech"
+        "name": "TTS"
       }
     }
   },

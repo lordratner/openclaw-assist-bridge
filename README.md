@@ -128,6 +128,13 @@ STT/TTS engines you want, then assign that assistant to your device. You need no
 select all three OC entities. Installation does not change default/preferred
 pipelines or other rooms.
 
+The Assist engine labels are **OpenClaw Conversation**, **OpenClaw STT**, and
+**OpenClaw TTS**. Label updates preserve existing entity IDs, pairing, and pipeline
+selections; an existing installation can still use `stt.openclaw_speech_recognition`
+and `tts.openclaw_speech`. Do not delete/re-add the connection to rename its labels.
+For a "TTS engine ... not found" error, use the current entity ID shown in HA,
+not a stale suffixed ID such as `tts.openclaw_speech_2`.
+
 For native HA control, enable **Device control** in integration Options and allow
 `home_assistant` under the OC agent's normal tool policy. Explicit follow-up intent
 uses `voice_conversation`; it also needs a suitable model and satellite. Keep

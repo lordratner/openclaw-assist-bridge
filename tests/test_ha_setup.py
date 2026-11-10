@@ -12,6 +12,7 @@ from homeassistant.config_entries import ConfigEntries
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 from homeassistant import bootstrap, loader
+from homeassistant.helpers import entity_registry as er
 from homeassistant.components.assist_pipeline import async_get_pipeline
 from homeassistant.components import tts
 
@@ -71,6 +72,40 @@ async def test_native_flow_registers_all_three_entities_and_actions_without_chan
         assert hass.services.has_service(DOMAIN, "query")
         assert hass.services.has_service(DOMAIN, "start_conversation")
         assert async_get_pipeline(hass, None).conversation_engine != entry.runtime_data.entities["conversation"].entity_id
+
+
+@pytest.mark.asyncio
+async def test_stage_labels_keep_existing_entity_ids_and_pipeline_references(hass):
+    """A display-name correction must not create new entities on an upgrade."""
+    with patch.object(VoiceClient, "pair", AsyncMock(return_value=PAIRED)), patch.object(VoiceClient, "capabilities", AsyncMock(return_value=CAPS)):
+        entry = await configure(hass)
+        registry = er.async_get(hass)
+        existing_ids = {
+            "conversation": "conversation.openclaw_conversation",
+            "stt": "stt.openclaw_speech_recognition",
+            "tts": "tts.openclaw_speech",
+        }
+        for stage, entity in entry.runtime_data.entities.items():
+            if entity.entity_id != existing_ids[stage]:
+                registry.async_update_entity(entity.entity_id, new_entity_id=existing_ids[stage])
+        await hass.async_block_till_done()
+        from homeassistant.components.assist_pipeline.pipeline import async_update_pipeline
+        pipeline = async_get_pipeline(hass, None)
+        await async_update_pipeline(hass, pipeline,
+                                    conversation_engine=existing_ids["conversation"],
+                                    stt_engine=existing_ids["stt"], stt_language="en",
+                                    tts_engine=existing_ids["tts"], tts_language="en")
+        pipeline_before = async_get_pipeline(hass, None)
+        assert await hass.config_entries.async_reload(entry.entry_id)
+        await hass.async_block_till_done()
+        assert async_get_pipeline(hass, None) == pipeline_before
+        expected_names = {"conversation": "OpenClaw Conversation", "stt": "OpenClaw STT", "tts": "OpenClaw TTS"}
+        for stage, entity in entry.runtime_data.entities.items():
+            assert entity.entity_id == existing_ids[stage]
+            assert hass.states.get(entity.entity_id).name == expected_names[stage]
+            row = registry.async_get(entity.entity_id)
+            assert row.unique_id == entry.entry_id + "_" + stage
+        assert len(er.async_entries_for_config_entry(registry, entry.entry_id)) == 3
 
 
 @pytest.mark.asyncio
